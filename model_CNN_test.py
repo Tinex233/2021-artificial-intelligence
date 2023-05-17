@@ -82,15 +82,16 @@ class FaceCNN(nn.Module):
 
 
 #opencv自带的一个面部识别分类器
-detection_model_path = 'model/haarcascade_frontalface_default.xml'
+detection_model_path = 'D:\VSCode\Codefield\CODE_Python\\facial-expression-recognition-main\model\haarcascade_frontalface_default.xml'
 
-classification_model_path = 'model/model_cnn.pkl'
+classification_model_path = 'D:\VSCode\Codefield\CODE_Python\\facial-expression-recognition-main\model\model_cnn2.pkl'
 
 # 加载人脸检测模型
 face_detection = cv2.CascadeClassifier(detection_model_path)
 
 # 加载表情识别模型
-emotion_classifier = torch.load(classification_model_path)
+# emotion_classifier = torch.load(classification_model_path)
+emotion_classifier = torch.load(classification_model_path, map_location=torch.device('cpu'))
 
 
 frame_window = 10
