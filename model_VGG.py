@@ -10,10 +10,12 @@ from tqdm import tqdm
 BATCH_SIZE = 128
 LR = 0.01
 EPOCH = 60
-DEVICE = torch.device('cpu')
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-path_train = 'face_images/vgg_train_set'
-path_vaild = 'face_images/vgg_vaild_set'
+"""path_train = 'face_images/vgg_train_set'
+path_vaild = 'face_images/vgg_vaild_set'"""
+path_train = '/root/autodl-tmp/facial-expression-recognition-main/face_images/resnet_train/emotion_images/'
+path_vaild = '/root/autodl-tmp/facial-expression-recognition-main/face_images/resnet_verify/emotion_images/'
 
 transforms_train = transforms.Compose([
     transforms.Grayscale(),#使用ImageFolder默认扩展为三通道，重新变回去就行
@@ -136,7 +138,7 @@ def RUN():
         train(model,device=DEVICE,dataset=train_set,optimizer=optimizer,epoch=epoch)
         vaild(model,device=DEVICE,dataset=vaild_set)
         #保存模型
-        torch.save(model,'model/model_vgg.pkl')
+        torch.save(model,'/root/autodl-tmp/facial-expression-recognition-main/model/model_vgg.pkl')
 
 
 if __name__ == '__main__':

@@ -81,15 +81,16 @@ resnet.add_module("fc", nn.Sequential(ResNet(), nn.Linear(512, 7)))
 
 
 #opencv自带的一个面部识别分类器
-detection_model_path = 'model/haarcascade_frontalface_default.xml'
+detection_model_path = 'D:\VSCode\Codefield\CODE_Python\\facial-expression-recognition-main\model\haarcascade_frontalface_default.xml'
 
-classification_model_path = 'model/model_resnet.pkl'
+classification_model_path = 'D:\VSCode\Codefield\CODE_Python\\facial-expression-recognition-main\model\model_resnet4.0.pkl'
 
 # 加载人脸检测模型
 face_detection = cv2.CascadeClassifier(detection_model_path)
 
 # 加载表情识别模型
-emotion_classifier = torch.load(classification_model_path)
+#emotion_classifier = torch.load(classification_model_path)
+emotion_classifier = torch.load(classification_model_path, map_location=torch.device('cpu'))
 
 
 frame_window = 10
@@ -102,7 +103,7 @@ emotion_window = []
 # 调起摄像头，0是笔记本自带摄像头
 video_capture = cv2.VideoCapture(0)
 # 视频文件识别
-# video_capture = cv2.VideoCapture("video/example_dsh.mp4")
+video_capture = cv2.VideoCapture("D:\VSCode\Codefield\CODE_Python\\facial-expression-recognition-main\\video\\1.mp4")
 font = cv2.FONT_HERSHEY_SIMPLEX
 cv2.startWindowThread()
 cv2.namedWindow('window_frame')
@@ -110,7 +111,7 @@ cv2.namedWindow('window_frame')
 while True:
     # 读取一帧
     _, frame = video_capture.read()
-    frame = frame[:,::-1,:]#水平翻转，符合自拍习惯
+    frame = frame[:,::1,:]#-1水平翻转，符合自拍习惯
     frame = frame.copy()
     # 获得灰度图，并且在内存中创建一个图像对象
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -156,7 +157,7 @@ while True:
             continue
 
         # 在矩形框上部，输出分类文字
-        cv2.putText(frame,emotion_mode,(x,y-30), font, .7,(0,0,255),1,cv2.LINE_AA)
+        cv2.putText(frame,emotion_mode,(x,y-10), font, .7,(0,0,255),1,cv2.LINE_AA)
 
     try:
         # 将图片从内存中显示到屏幕上

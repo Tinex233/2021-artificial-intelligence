@@ -5,21 +5,22 @@ import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 from tqdm import tqdm
-
-
+import numpy as np
+from matplotlib import pyplot as plt
 
 BATCH_SIZE = 128
 LR = 0.01
-EPOCH = 60
-DEVICE = torch.device('cpu')
+EPOCH = 90
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-
-path_train = 'face_images/resnet_train_set'
-path_vaild = 'face_images/resnet_vaild_set'
+path_train = '/root/autodl-tmp/facial-expression-recognition-main/face_images/resnet_train/emotion_images/'
+path_vaild = '/root/autodl-tmp/facial-expression-recognition-main/face_images/resnet_verify/emotion_images/'
 
 transforms_train = transforms.Compose([
     transforms.Grayscale(),#使用ImageFolder默认扩展为三通道，重新变回去就行
     transforms.RandomHorizontalFlip(),#随机翻转
+    transforms.RandomRotation(degrees=15),#随机旋转
+    transforms.RandomCrop((48,48),padding=None),#随机剪裁
     transforms.ColorJitter(brightness=0.5, contrast=0.5),#随机调整亮度和对比度
     transforms.ToTensor()
 ])
@@ -28,11 +29,39 @@ transforms_vaild = transforms.Compose([
     transforms.ToTensor()
 ])
 
+'''class CustomDataset(Dataset):
+    def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
+        self.img_labels = pd.read_csv(annotations_file, header=None)
+        self.img_dir = img_dir
+        self.transform = transform
+        self.target_transform = target_transform
+    
+    def __len__(self):
+        return len(self.img_labels)
+    
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+        img = Image.open(img_path).convert('RGB')
+        label = self.img_labels.iloc[idx, 1]
+        
+        if self.transform:
+            img = self.transform(img)
+        
+        if self.target_transform:
+            label = self.target_transform(label)
+        
+        return img, label
+
+'''
+'''data_train = CustomDataset(path_train+'image_emotion.csv/', img_dir=path_train, transform=train_transforms)
+data_valid = CustomDataset(path_valid+'image_emotion.csv/', img_dir=path_valid, transform=test_transforms)
+'''
 data_train = torchvision.datasets.ImageFolder(root=path_train,transform=transforms_train)
 data_vaild = torchvision.datasets.ImageFolder(root=path_vaild,transform=transforms_vaild)
 
 train_set = torch.utils.data.DataLoader(dataset=data_train,batch_size=BATCH_SIZE,shuffle=True)
 vaild_set = torch.utils.data.DataLoader(dataset=data_vaild,batch_size=BATCH_SIZE,shuffle=False)
+
 
 
 class ResNet(nn.Module):
@@ -107,7 +136,9 @@ train_ac = []
 vaild_loss = []
 vaild_ac = []
 y_pred = []
-
+epoch_x = []
+train_acc = []
+vaild_acc = []
 
 def train(model,device,dataset,optimizer,epoch):
     model.train()
@@ -120,13 +151,15 @@ def train(model,device,dataset,optimizer,epoch):
         correct += pred.eq(y.view_as(pred)).sum().item()
         loss = criterion(output,y) 
         loss.backward()
-        optimizer.step()   
-        
+        optimizer.step()
+    
+    train_acc.append(100*correct/len(data_train))
+       
     train_ac.append(correct/len(data_train))   
     train_loss.append(loss.item())
     print("Epoch {} Loss {:.4f} Accuracy {}/{} ({:.0f}%)".format(epoch,loss,correct,len(data_train),100*correct/len(data_train)))
 
-def vaild(model,device,dataset):
+def vaild(model,device,dataset,epoch):
     model.eval()
     correct = 0
     with torch.no_grad():
@@ -138,6 +171,8 @@ def vaild(model,device,dataset):
             global  y_pred 
             y_pred += pred.view(pred.size()[0]).cpu().numpy().tolist()
             correct += pred.eq(y.view_as(pred)).sum().item()
+            
+    vaild_acc.append(100.*correct/len(data_vaild))
             
     vaild_ac.append(correct/len(data_vaild)) 
     vaild_loss.append(loss.item())
@@ -153,10 +188,23 @@ def RUN():
             LR*=0.1
             optimizer=optimizer = optim.SGD(model.parameters(),lr=LR,momentum=0.9)
         '''
+        
+        epoch_x.append(epoch)
+        
         #尝试动态学习率
         train(model,device=DEVICE,dataset=train_set,optimizer=optimizer,epoch=epoch)
-        vaild(model,device=DEVICE,dataset=vaild_set)
-        torch.save(model,'model/model_resnet.pkl')
+        vaild(model,device=DEVICE,dataset=vaild_set,epoch=epoch)
+        torch.save(model,'/root/autodl-tmp/facial-expression-recognition-main/model/model_resnet.pkl')
+        
+        if epoch==EPOCH:#结束生成准确率变化统计图
+            plt.xlabel('Epoch')
+            plt.ylabel('Accuracy%')
+            plt.plot(epoch_x,train_acc,label='Train Accuracy',color='b')
+            plt.plot(epoch_x,vaild_acc,label='Test Accuracy',color='g')
+            plt.plot(epoch_x,np.full(len(epoch_x), 60),color='r',linestyle='--')
+            plt.legend()
+            plt.savefig("/root/autodl-tmp/facial-expression-recognition-main/resnet_result.png")#,dpi=1000,bbox_inches = 'tight')
+            plt.show()
 
 if __name__ == '__main__':
     RUN()
